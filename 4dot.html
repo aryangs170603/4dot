@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect Four Dots</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            background-image: url('https://cdn4.vectorstock.com/i/1000x1000/24/83/funky-abstract-background-vector-112483.jpg');
+        }
+
+        .container {
+            max-width: 400px;
+            margin: 50px auto;
+            text-align: center;
+        }
+
+        h1 {
+            font-family: cursive;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(7, 50px);
+            grid-template-rows: repeat(6, 50px);
+            grid-gap: 5px;
+            background-color: #66def6;
+            border: 2px solid #181c02;
+            border-radius: 10px;
+            padding: 5px;
+        }
+
+        .cell {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: #fff;
+            border: 2px solid #1565c0;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cell:hover {
+            background-color: #ecbd8f;
+        }
+
+        .player1 {
+            background-color: #f30606;
+        }
+
+        .player2 {
+            background-color: #ecff3e;
+        }
+
+        .winner {
+            animation: winner-animation 1s infinite alternate;
+        }
+
+        @keyframes winner-animation {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.3); }
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #54b5ee;
+            color: rgb(12, 11, 11);
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        button:hover {
+            background-color: #77ec7d;
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgb(0, 0, 0);
+            background-color: rgba(0, 0, 0, 0.4);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #ffffff;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 300px;
+            text-align: center;
+            border-radius: 10px;
+        }
+
+        .close {
+            color: #131010;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Connect Four Dots</h1>
+        <div id="board" class="board"></div>
+        <button onclick="resetGame()">Reset Game</button>
+    </div>
+
+    <!-- The Modal -->
+    <div id="winnerModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <p id="winnerMessage"></p>
+            <button onclick="resetGame()">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        const ROWS = 6;
+        const COLS = 7;
+        const EMPTY = 0;
+        const PLAYER1 = 1;
+        const PLAYER2 = 2;
+        let currentPlayer = PLAYER1;
+        let board = [];
+        let gameActive = true;
+
+        function initializeBoard() {
+            board = [];
+            for (let row = 0; row < ROWS; row++) {
+                board[row] = [];
+                for (let col = 0; col < COLS; col++) {
+                    board[row][col] = EMPTY;
+                }
+            }
+        }
+
+        function renderBoard() {
+            const boardElement = document.getElementById('board');
+            boardElement.innerHTML = '';
+
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    cell.dataset.row = row;
+                    cell.dataset.col = col;
+                    cell.addEventListener('click', () => dropPiece(col));
+                    if (board[row][col] === PLAYER1) {
+                        cell.classList.add('player1');
+                    } else if (board[row][col] === PLAYER2) {
+                        cell.classList.add('player2');
+                    }
+                    boardElement.appendChild(cell);
+                }
+            }
+        }
+
+        function dropPiece(col) {
+            if (!gameActive) return;
+
+            for (let row = ROWS - 1; row >= 0; row--) {
+                if (board[row][col] === EMPTY) {
+                    board[row][col] = currentPlayer;
+                    renderBoard();
+                    if (checkWin(row, col)) {
+                        highlightWinningCells(getWinningCells(row, col));
+                        showWinnerModal(currentPlayer);
+                        gameActive = false;
+                        return;
+                    }
+                    currentPlayer = currentPlayer === PLAYER1 ? PLAYER2 : PLAYER1;
+                    return;
+                }
+            }
+        }
+
+        function checkWin(row, col) {
+            return (
+                checkDirection(row, col, 0, 1) || // Horizontal
+                checkDirection(row, col, 1, 0) || // Vertical
+                checkDirection(row, col, 1, 1) || // Diagonal /
+                checkDirection(row, col, -1, 1)   // Diagonal \
+            );
+        }
+
+        function getWinningCells(row, col) {
+            return (
+                checkDirection(row, col, 0, 1, true) || // Horizontal
+                checkDirection(row, col, 1, 0, true) || // Vertical
+                checkDirection(row, col, 1, 1, true) || // Diagonal /
+                checkDirection(row, col, -1, 1, true)   // Diagonal \
+            );
+        }
+
+        function checkDirection(row, col, deltaRow, deltaCol, returnCells = false) {
+            const player = board[row][col];
+            let count = 1;
+            let winningCells = [[row, col]];
+
+            // Check in one direction
+            let r = row + deltaRow;
+            let c = col + deltaCol;
+            while (r >= 0 && r < ROWS && c >= 0 && c < COLS && board[r][c] === player) {
+                count++;
+                winningCells.push([r, c]);
+                r += deltaRow;
+                c += deltaCol;
+            }
+
+            // Check in the opposite direction
+            r = row - deltaRow;
+            c = col - deltaCol;
+            while (r >= 0 && r < ROWS && c >= 0 && c < COLS && board[r][c] === player) {
+                count++;
+                winningCells.push([r, c]);
+                r -= deltaRow;
+                c -= deltaCol;
+            }
+
+            if (count >= 4) {
+                return returnCells ? winningCells : true;
+            }
+            return false;
+        }
+
+        function highlightWinningCells(cells) {
+            cells.forEach(([row, col]) => {
+                const cell = document.querySelector(`.cell[data-row='${row}'][data-col='${col}']`);
+                cell.classList.add('winner');
+            });
+        }
+
+        function showWinnerModal(player) {
+            const modal = document.getElementById('winnerModal');
+            const winnerMessage = document.getElementById('winnerMessage');
+            winnerMessage.textContent = `Player ${player === PLAYER1 ? '1 (Red)' : '2 (Yellow)'} Wins!`;
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('winnerModal');
+            modal.style.display = 'none';
+        }
+
+        function resetGame() {
+            initializeBoard();
+            currentPlayer = PLAYER1;
+            gameActive = true;
+            renderBoard();
+            closeModal();
+        }
+
+        // Initialize the game
+        initializeBoard();
+        renderBoard();
+    </script>
+</body>
+</html>
